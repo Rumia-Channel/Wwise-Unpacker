@@ -1,5 +1,5 @@
 # Wwise-Unpacker
-Unpack game audio Wwise files (pck, bnk)
+Unpack game audio Wwise files (PCK, BNK)
 
 **This guide is for Windows-64bit only!** I'll be using the game Life is Strange **as an example**.
 
