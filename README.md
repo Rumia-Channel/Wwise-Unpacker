@@ -38,6 +38,84 @@ Once finished you can find all decoded files inside the "MP3" or "OGG" folder re
 * When decoding MP3 files are first unpacked as OGG and then converted with FFmpeg and the LAME MP3 encoder. If you want the best quality possible don't use MP3, unpack it as OGG.
 * The unpacker can be used for any game that uses Wwise audio, not only Life is Strange.
 
+---
+
+## Getting the original names back (optional)
+
+Wwise refers to everything by 32-bit IDs, so depending on the game the decoded files may come out as
+`43388703.ogg`. `Tools/wwise_names.py` renames such files using whatever name metadata is available:
+
+* `SoundbanksInfo.xml` (or `(bankname).txt` / `Wwise_IDs.h`) — exact names, including the original
+  media file names. Only usable if the game ships these files.
+* `wwnames.txt` — candidate name lists; recovers *event/bank* names by computing Wwise's FNV-1 hash
+  of each name. Prebuilt lists for ~250 games: https://github.com/bnnm/wwiser-utils/tree/master/wwnames
+
+Media (`*.wem`) IDs are FNV hashes of editor GUIDs, so without `SoundbanksInfo.xml`-style metadata
+only event/bank names are recoverable.
+
+**The default `wavescan.bms` step loses IDs**, so rename *before* decoding, extracting with a script
+that keeps them (`wwise_pck_extractor.bms` / `wwise_bnk_extractor.bms` from
+https://github.com/bnnm/wwiser-utils/tree/master/scripts):
+
+```
+Tools\quickbms.exe wwise_pck_extractor.bms "Game Files" "Tools\Decoding"
+python Tools\wwise_names.py --fetch-wwnames "Game Title"                      # or point it at the game's XML
+python Tools\wwise_names.py wwnames.txt --audio-dir "Tools\Decoding"          # dry run, lists every rename
+python Tools\wwise_names.py wwnames.txt --audio-dir "Tools\Decoding" --apply  # rename
+```
+
+Then decode the renamed files with `ww2ogg`/`revorb`/`ffmpeg` as usual (names carry over).
+`--help` lists all options (`--csv` writes an ID→name report, `--name-style`, `--keep-media-hash`).
+
+Two more name sources the tool understands:
+
+* **External sources** (voice lines and similar, stored by path): name list lines that look like paths
+  (`English/voice/chapter0_3_mar7th_101.wem`) are matched to the 64-bit FNV-1 hash of the path, and
+  the original subfolders are recreated (`--flat` to skip). wwiser-utils ships an
+  `... (External).txt` list for such games.
+* **`.txtp` folders**: [wwiser](https://github.com/bnnm/wwiser) can resolve event names for streamed
+  or in-bank media and write `.txtp` files that reference them; pass the `.txtp` folder as a source
+  and each media ID is renamed after the event that plays it.
+* **Cracking external paths**: when a game ships its original strings somewhere (config tables,
+  metadata, scripts), `Tools/wwise_crack.py` harvests candidate tokens and tests them against the
+  64-bit IDs, writing a name list for `wwise_names.py`:
+
+  ```
+  python Tools\wwise_crack.py --audio-dir "Tools\Decoding" --files "<game data folder>" ^
+      --template "{lang}/voice/{token}.wem" --langs English Japanese --out wwnames_cracked.txt
+  ```
+
+Decoding a folder of `.wem` files with the bundled tools (skips non-Vorbis media):
+
+```
+python Tools\decode_wem.py --dir "Tools\Decoding" --out OGG --recursive
+```
+
+### Adding another game (recipe)
+
+The tools are game-agnostic; nothing is hard-coded to a specific title. The usual order is:
+
+1. **Extract with IDs preserved** — `wavescan.bms` carving loses the IDs, so a later rename is
+   impossible. Use `wwise_pck_extractor.bms` for `.pck` (writes `<id>.wem` plus
+   `externals/<16 hex>.wem`), keep `.bnk` as-is for wwiser, and dump in-bank media with
+   `Tools\wwise_bnk_extract.py`.
+2. **Collect name metadata, most exact first**:
+
+   | source | recovers | how |
+   |---|---|---|
+   | `SoundbanksInfo.xml` / `.json`, `(bank).txt`, `Wwise_IDs.h` | exact media/event/bank names | only if the game ships them |
+   | `wwnames.txt` | event/bank hashnames (32-bit) | `--fetch-wwnames "Game Title"` |
+   | strings harvested from the game + `Tools\wwise_crack.py` | external paths (64-bit) and event names (32-bit, `--txtp` mode) | data tables, metadata, executables |
+   | `.txtp` from [wwiser](https://github.com/bnnm/wwiser) | media ID → event name | generated from the banks |
+
+   `wwise_crack.py` accepts extra candidate pools (`--tokens-from`, e.g. bank/object names) and
+   generates common affix variants (`--variants`, `--expand N`) — that is how games whose event
+   names are not shipped at all (only `play_<object>_01`-style conventions) still get named.
+3. **Rename, then decode** — `wwise_names.py` (dry run, then `--apply`); check the `--csv` report;
+   then `decode_wem.py`.
+4. **Expect gaps**: `.wem` IDs are hashes of editor GUIDs, so media with no referenced/named event
+   stay numeric. That is a property of the game data, not of the tools.
+
 **I unpacked to .OGG for the best quality, how do I even open these files?**
 
 You'll need a player that supports the format! Personally I use "foobar2000" but feel free to search around and find what's best for you.
