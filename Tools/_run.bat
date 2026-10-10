@@ -177,11 +177,23 @@ echo -------------------------------------------------------------
 echo.
 
 :choice
+rem Only sources staged inside this unpacker folder may be deleted. Anything
+rem else (a game install folder, network share, ...) is never touched.
+for %%i in ("%WU_INPUT%") do set "WU_IN_ABS=%%~fi"
+set "WU_REPO=%CD%"
+call set "WU_REST=%%WU_IN_ABS:%WU_REPO%=%%"
+if /I "%WU_REST%"=="%WU_IN_ABS%" goto :outside
 set "c="
 set /P "c=Should I delete PCK/BNK files from '%WU_INPUT%' [Y/N]?"
 if /I "%c%"=="Y" goto :yes
 if /I "%c%"=="N" goto :hella_no
 goto choice
+
+:outside
+echo.
+echo Input folder is outside this unpacker folder: '%WU_INPUT%'
+echo Sources are left untouched (only folders inside the unpacker can be cleaned).
+goto :hella_no
 
 :yes
 del /Q "%WU_INPUT%\*.pck" >nul 2>&1
