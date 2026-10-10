@@ -54,3 +54,13 @@ Tools/wwnames.txt
 Tools/Decoding/*
 !Tools/Decoding/.keep
 Tools/name-map.csv
+
+# staged game containers and decoded output (folder markers stay tracked)
+Game Files/*
+!Game Files/.keep
+OGG/*
+!OGG/.keep
+MP3/*
+!MP3/.keep
+WAV/*
+!WAV/.keep
