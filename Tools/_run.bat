@@ -134,8 +134,9 @@ if defined PY (
   echo   no Python found - using the bundled tools directly
   pushd "Tools\Decoding"
   for %%d in ("*.wem" "*.wav") do if exist "%%~fd" (
-    "..\ww2ogg.exe" "%%d" --pcb "..\packed_codebooks_aoTuV_603.bin" -o "%%~nd.ogg"
-    del "%%d" >nul 2>&1
+    if not exist "%%~nd.ogg" (
+      "..\ww2ogg.exe" "%%d" --pcb "..\packed_codebooks_aoTuV_603.bin" -o "%%~nd.ogg"
+    )
   )
   for %%e in ("*.ogg") do if exist "%%~fe" (
     "..\revorb.exe" "%%e"
@@ -144,11 +145,11 @@ if defined PY (
   popd
   if /I "%FMT%"=="mp3" for %%f in ("%WU_OUT_ABS%\*.ogg") do if exist "%%~ff" (
     "Tools\ffmpeg.exe" -hide_banner -loglevel error -y -i "%%~ff" -acodec libmp3lame -q:a 0 "%WU_OUT_ABS%\%%~nf.mp3"
-    del "%%~ff" >nul 2>&1
+    if exist "%WU_OUT_ABS%\%%~nf.mp3" del "%%~ff" >nul 2>&1
   )
   if /I "%FMT%"=="wav" for %%f in ("%WU_OUT_ABS%\*.ogg") do if exist "%%~ff" (
     "Tools\ffmpeg.exe" -hide_banner -loglevel error -y -i "%%~ff" -c:a pcm_s16le "%WU_OUT_ABS%\%%~nf.wav"
-    del "%%~ff" >nul 2>&1
+    if exist "%WU_OUT_ABS%\%%~nf.wav" del "%%~ff" >nul 2>&1
   )
 )
 
@@ -177,12 +178,17 @@ echo -------------------------------------------------------------
 echo.
 
 :choice
-rem Only sources staged inside this unpacker folder may be deleted. Anything
-rem else (a game install folder, network share, ...) is never touched.
+rem Only sources staged inside this unpacker folder may be deleted. The check
+rem requires the input folder to be the unpacker root or below it, so a
+rem sibling like "Wwise-Unpacker 2" next door never counts as inside.
 for %%i in ("%WU_INPUT%") do set "WU_IN_ABS=%%~fi"
 set "WU_REPO=%CD%"
 call set "WU_REST=%%WU_IN_ABS:%WU_REPO%=%%"
 if /I "%WU_REST%"=="%WU_IN_ABS%" goto :outside
+set "WU_INSIDE="
+if "%WU_REST%"=="" set "WU_INSIDE=1"
+if "%WU_REST:~0,1%"=="\" set "WU_INSIDE=1"
+if not defined WU_INSIDE goto :outside
 set "c="
 set /P "c=Should I delete PCK/BNK files from '%WU_INPUT%' [Y/N]?"
 if /I "%c%"=="Y" goto :yes
