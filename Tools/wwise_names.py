@@ -459,18 +459,30 @@ def fetch_wwnames(title: str, out: Path) -> int:
     with urllib.request.urlopen(req, timeout=30) as resp:
         items = json.load(resp)
     names = [it["name"] for it in items if it.get("name", "").endswith(".txt")]
-    wanted = title.lower()
-    matches = [n for n in names if wanted in n.lower()]
+
+    def norm(text: str) -> str:
+        return re.sub(r"[^a-z0-9]", "", text.lower())
+
+    wanted = norm(title)
+    matches = [n for n in names if wanted and wanted in norm(n)]
     if not matches:
         close = difflib.get_close_matches(title, [n.rsplit(" (", 1)[0] for n in names], n=8, cutoff=0.5)
         print(f"no list matching {title!r}. close titles: {', '.join(close) or '(none)'}", file=sys.stderr)
         return 1
     pick = sorted(matches, key=len)[0]
-    url = WWNAMES_RAW + urllib.parse.quote(pick)
-    with urllib.request.urlopen(url, timeout=60) as resp:
-        data = resp.read()
-    out.write_bytes(data)
-    print(f"saved {out} from {pick} ({len(data)} bytes)")
+    # companion lists of the same title, e.g. "Title (PC)" + "Title (PC) (External)"
+    stem = pick[:-4] if pick.lower().endswith(".txt") else pick
+    chosen = [pick] + sorted(n for n in matches
+                             if n != pick and n[:-4].lower().startswith(stem.lower()))
+    chunks = []
+    for name in chosen:
+        url = WWNAMES_RAW + urllib.parse.quote(name)
+        with urllib.request.urlopen(url, timeout=60) as resp:
+            data = resp.read()
+        print(f"  fetched {name} ({len(data)} bytes)")
+        chunks.append(b"### " + name.encode("utf-8", "replace") + b"\n" + data)
+    out.write_bytes(b"\n".join(chunks))
+    print(f"saved {out} with {len(chosen)} list(s) from {', '.join(chosen)}")
     return 0
 
 
