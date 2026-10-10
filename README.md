@@ -27,8 +27,31 @@ Inside each folder you will find the following types of files which are quite se
 Keep in mind these are containers, inside each there could be either one or hundreds of audio files. Some of the largest VO containers have **over 500!** Fortunately they are all properly labeled with episode, character, location, action and mood after unpacking. 
 For example: *VO_E2_2A.STM_15~Cue_E2_2A_Diner_ChloePuzzle02Happy_IGE_Chloe_200.ogg*
 
-Find any containers you want to decode and copy them to the "Game Files" folder inside Wwise Unpacker (they can be either PCK or BNK, the unpacker handles it), then simply open "Unpack to MP3.bat" or "Unpack to OGG.bat" depending on which you like and it will do all the work for you. 
-Once finished you can find all decoded files inside the "MP3" or "OGG" folder respectively.
+Find any containers you want to decode and copy them to the "Game Files" folder inside Wwise Unpacker (they can be either PCK or BNK, the unpacker handles it), then open the bat for the format you want - `Unpack to OGG.bat` (best quality), `Unpack to MP3.bat` or `Unpack to WAV.bat` - and it will do all the work for you.
+Once finished you can find all decoded files inside the "OGG", "MP3" or "WAV" folder respectively.
+
+At the start every bat asks three things:
+
+* **Mode** - `1` Classic carves audio out of PCK/BNK with wavescan (fast, filenames are just
+  `<container>_<n>`, ids are lost) and `2` Names keeps the Wwise ids, restores the original /
+  in-game names (SoundbanksInfo.xml, `wwnames.txt`, wwiser, string harvesting), then decodes. Mode 2 shows the planned renames and asks before applying.
+* **Input folder** - anything you type is used as-is (relative paths are relative to the repo),
+  default `Game Files`.
+* **Output folder** - default `OGG` / `MP3` / `WAV`. In mode 2 you can also type a game title to
+  auto-download a ready-made name list from wwiser-utils (250+ games).
+
+Bats can also be started with the input folder as an argument: `Unpack to OGG.bat "D:\some folder"`.
+
+**Bundled third-party helpers** (mode 2 extracts ids and resolves names with these):
+
+| file | what | source |
+|---|---|---|
+| `Tools\wwise_pck_extractor.bms` | QuickBMS script that unpacks `.pck` keeping media ids (`<pck>/<id>.wem`, `externals/<16 hex>.wem`) | https://github.com/bnnm/wwiser-utils (v2 by bnnm, v1 by Nicknine) |
+| `Tools\wwiser.pyz` | Wwise bank explorer, used to resolve event names and media mappings (`v20260808`) | https://github.com/bnnm/wwiser |
+
+Both upstream projects declare **no license file**; they are included here for personal use and are not
+covered by this repository's license. If a file is missing (old checkout, manual cleanup) the bats try
+a one-time download via `Tools\_fetch.bat` (curl, or PowerShell as fallback).
 
 **Things you should know about the decoder:**
 
