@@ -38,7 +38,12 @@ At the start every bat asks three things:
 * **Input folder** - anything you type is used as-is (relative paths are relative to the repo),
   default `Game Files`.
 * **Output folder** - default `OGG` / `MP3` / `WAV`. In mode 2 you can also type a game title to
-  auto-download a ready-made name list from wwiser-utils (250+ games).
+  auto-download ready-made name lists from wwiser-utils (250+ games; companion lists such as
+  `... (External).txt` are merged automatically).
+
+At the end the bat offers to delete the PCK/BNK sources. That option only appears when the input
+folder is **inside** the unpacker folder (e.g. `Game Files`); for anything else - a game install,
+another drive, a network share - it says so and leaves the files untouched.
 
 Bats can also be started with the input folder as an argument: `Unpack to OGG.bat "D:\some folder"`.
 
@@ -134,6 +139,8 @@ The tools are game-agnostic; nothing is hard-coded to a specific title. The usua
    `wwise_crack.py` accepts extra candidate pools (`--tokens-from`, e.g. bank/object names) and
    generates common affix variants (`--variants`, `--expand N`) — that is how games whose event
    names are not shipped at all (only `play_<object>_01`-style conventions) still get named.
+   External sources use path templates: `{lang}/voice/{token}.wem` for voice, or e.g.
+   `SFX/{token}.wem` for game-specific SFX externals, with tokens harvested from the game data.
 3. **Rename, then decode** — `wwise_names.py` (dry run, then `--apply`); check the `--csv` report;
    then `decode_wem.py`.
 4. **Expect gaps**: `.wem` IDs are hashes of editor GUIDs, so media with no referenced/named event
