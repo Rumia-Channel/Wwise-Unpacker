@@ -36,7 +36,11 @@ At the start every bat asks three things:
   `<container>_<n>`, ids are lost) and `2` Names keeps the Wwise ids, restores the original /
   in-game names (SoundbanksInfo.xml, `wwnames.txt`, wwiser, string harvesting), then decodes. Mode 2 shows the planned renames and asks before applying.
 * **Input folder** - anything you type is used as-is (relative paths are relative to the repo),
-  default `Game Files`.
+  default `Game Files`. Subfolders are searched too, so pointing at a parent folder works; the bat
+  reports how many containers and MB it found and asks for confirmation before working through a
+  large set (3 GB+). Example (Star Rail): `...\StarRail_Data\StreamingAssets\Audio\AudioPackage\
+  Windows` for banks/music/SFX, or `...\Persistent\Audio\AudioPackage\Windows\<language>` for one
+  language's voice packs.
 * **Output folder** - default `OGG` / `MP3` / `WAV`. In mode 2 you can also type a game title to
   auto-download ready-made name lists from wwiser-utils (250+ games; companion lists such as
   `... (External).txt` are merged automatically).

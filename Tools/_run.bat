@@ -21,6 +21,21 @@ echo   Input  : %WU_INPUT%
 echo   Output : %WU_OUT_ABS%  (format: %FMT%)
 echo.
 
+rem --- find the containers: the folder itself or anywhere below it
+set "WU_COUNT=0"
+set "WU_MB=0"
+for /r "%WU_INPUT%" %%f in (*.pck *.bnk) do (
+  set /a WU_COUNT+=1
+  set /a WU_MB+=%%~zf/1048576
+)
+if %WU_COUNT%==0 goto nothing_found
+echo   Containers: %WU_COUNT% file(s), about %WU_MB% MB (subfolders included)
+if %WU_MB% LEQ 3000 goto containers_ok
+set "GO="
+set /P "GO=  That is a large set (decoding needs space) - continue? [Y/N]: "
+if /I not "%GO%"=="Y" goto aborted
+:containers_ok
+
 rem --- locate Python (needed by the names mode and the bulk decoder)
 set "PY="
 for %%c in (python py python3) do (
@@ -41,11 +56,13 @@ goto names
 rem ---------------------------------------------------------------- classic
 :classic
 echo   [1/3] quickbms + wavescan - carving audio from PCK/BNK ...
-"Tools\quickbms.exe" -Y "Tools\wavescan.bms" "%WU_INPUT%" "Tools\Decoding"
+for /r "%WU_INPUT%" %%f in (*.pck) do if exist "%%~ff" (
+  "Tools\quickbms.exe" -Y "Tools\wavescan.bms" "%%~ff" "Tools\Decoding"
+)
 echo   [2/3] bnkextr: extracting *.BNK ...
-for %%b in ("%WU_INPUT%\*.bnk") do if exist "%%~fb" (
+for /r "%WU_INPUT%" %%f in (*.bnk) do if exist "%%~ff" (
   pushd "Tools\Decoding"
-  "..\bnkextr.exe" "%%~fb"
+  "..\bnkextr.exe" "%%~ff"
   popd
 )
 goto decode
@@ -54,22 +71,22 @@ rem ------------------------------------------------------------------ names
 :names
 echo   [1/4] extracting with IDs preserved ...
 set "HAVE_PCK="
-for %%p in ("%WU_INPUT%\*.pck") do if exist "%%~fp" set "HAVE_PCK=1"
+for /r "%WU_INPUT%" %%f in (*.pck) do if exist "%%~ff" set "HAVE_PCK=1"
 set "HAVE_BNK="
-for %%b in ("%WU_INPUT%\*.bnk") do if exist "%%~fb" set "HAVE_BNK=1"
+for /r "%WU_INPUT%" %%f in (*.bnk) do if exist "%%~ff" set "HAVE_BNK=1"
 if defined HAVE_PCK (
   call "Tools\_fetch.bat" "https://raw.githubusercontent.com/bnnm/wwiser-utils/master/scripts/wwise_pck_extractor.bms" "Tools\wwise_pck_extractor.bms"
   if exist "Tools\wwise_pck_extractor.bms" (
-    for %%p in ("%WU_INPUT%\*.pck") do if exist "%%~fp" (
-      "Tools\quickbms.exe" -Y -o "Tools\wwise_pck_extractor.bms" "%%~fp" "Tools\Decoding"
+    for /r "%WU_INPUT%" %%f in (*.pck) do if exist "%%~ff" (
+      "Tools\quickbms.exe" -Y -o "Tools\wwise_pck_extractor.bms" "%%~ff" "Tools\Decoding"
     )
   )
 )
 if defined HAVE_BNK (
-  "%PY%" "Tools\wwise_bnk_extract.py" --banks "%WU_INPUT%\*.bnk" --out "Tools\Decoding"
+  "%PY%" "Tools\wwise_bnk_extract.py" --banks "%WU_INPUT%" --out "Tools\Decoding"
 )
-for %%m in ("%WU_INPUT%\*.wem") do if exist "%%~fm" copy /Y "%%~fm" "Tools\Decoding\" >nul
-for %%m in ("%WU_INPUT%\*.wav") do if exist "%%~fm" copy /Y "%%~fm" "Tools\Decoding\" >nul
+if exist "%WU_INPUT%\*.wem" xcopy "%WU_INPUT%\*.wem" "Tools\Decoding\" /Y /S /Q >nul
+if exist "%WU_INPUT%\*.wav" xcopy "%WU_INPUT%\*.wav" "Tools\Decoding\" /Y /S /Q >nul
 set "HAVE_DEC_BNK="
 for /r "Tools\Decoding" %%b in (*.bnk) do set "HAVE_DEC_BNK=1"
 if defined HAVE_DEC_BNK (
@@ -214,6 +231,20 @@ pause
 exit /b 0
 
 rem ------------------------------------------------------------- utilities
+:nothing_found
+echo.
+echo   No PCK/BNK files found in '%WU_INPUT%' (subfolders were searched too).
+echo   Point the input at the folder that holds the .pck/.bnk files, e.g.
+echo     ...\StarRail_Data\StreamingAssets\Audio\AudioPackage\Windows
+echo   or copy the containers you want into 'Game Files' first.
+pause
+exit /b 1
+
+:aborted
+echo   Cancelled - nothing was processed.
+pause
+exit /b 0
+
 :addsrc
 if exist "%~1" set SRCS=%SRCS% "%~1"
 exit /b 0
