@@ -1,6 +1,10 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
+# Windows batch files must check out with CRLF line endings
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
 # Custom for Visual Studio
 *.cs     diff=csharp
 

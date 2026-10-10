@@ -41,3 +41,16 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+__pycache__
+
+.serena
+
+# name lists downloaded on demand by the Unpack bats
+wwnames.txt
+Tools/wwnames.txt
+
+# working files produced by the Unpack bats
+Tools/Decoding/*
+!Tools/Decoding/.keep
+Tools/name-map.csv
